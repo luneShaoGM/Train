@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <canvas width="300px" height="300px"></canvas>
+  <script>
+    javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+  </script>
+
+  <script>
+    window.RAF = (function(){
+     return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function (callback) {window.setTimeout(callback, 1000 / 60); };
+   })();
+ </script>
+
+  <script>
+    const canvas = document.querySelector('canvas')
+    const ctx = canvas.getContext('2d')
+    const Balls = []
+    const Lines = []
+    const count = 8 // 纬度层数
+    const floor = 8 // 经度层数
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    const layerR = 60
+    const angleY = Math.PI / 100
+    
+    ctx.translate(0, canvas.height)
+    ctx.scale(1, -1)
+    ctx.translate(centerX, centerX)
+
+    const Stage = function () {
+      this.cacheCanvas = document.createElement('canvas')
+      this.cacheCanvas.width = canvas.width
+      this.cacheCanvas.height = canvas.height
+      this.cacheCtx = this.cacheCanvas.getContext('2d')
+      this.cacheCtx.translate(0, canvas.height)
+      this.cacheCtx.scale(1, -1)
+      this.cacheCtx.translate(centerX, centerX)
+    }
+    const Ball = function (x, y, z, r, useCache) {
+      this.x = x
+      this.y = y
+      this.z = z
+      this.r = r
+      
+      this.cacheCanvas = document.createElement('canvas')
+      this.cacheCtx = this.cacheCanvas.getContext('2d')
+      this.useCache = useCache
+    }
+    const Layer = function (num, up, useCache) {
+      this.num = num
+      this.up = up
+      this.useCache = useCache
+      this.cacheCanvas = document.createElement('canvas')
+      this.cacheCanvas.width = canvas.width
+      this.cacheCanvas.height = canvas.height
+      this.cacheCtx = this.cacheCanvas.getContext('2d')
+      this.cacheCtx.translate(0, canvas.height)
+      this.cacheCtx.scale(1, -1)
+      this.cacheCtx.translate(centerX, centerX)
+    }
+    const Line = function (x, y, z) {
+      this.x = x
+      this.y = y
+      this.z = z
+    }
+
+    Layer.prototype = {
+      render () {
+        this.cacheCtx.save()
+        this.cacheCtx.beginPath()
+        this.radius = layerR * Math.cos(this.num * (Math.PI / floor)) 
+        this.cacheCtx.arc(0, 0, this.radius, 0, Math.PI * 2)
+        this.cacheCtx.strokeStyle = this.color
+        // this.cacheCtx.stroke()
+        this.cacheCtx.closePath()
+        this.cacheCtx.restore()
+        // ctx.drawImage(this.cacheCanvas, -centerX, -centerY)
+        this.setBalls()
+      },
+      setBalls () {
+        for (let j = 0; j < count; ++j) {
+          const x = Math.cos(j * (Math.PI * 2 / count)) * this.radius
+          const y = Math.sin(j * (Math.PI * 2 / count)) * this.radius
+          const z = this.up * Math.sqrt(Math.pow(layerR, 2) - Math.pow(this.radius, 2))
+          const r = 2
+          const ball = new Ball(x, y, z, r, true)
+          // ball.render()
+          Balls.push(ball)
+        }
+      }
+    }
+
+    Ball.prototype = {
+      render () {
+        if (this.useCache) {
+          this.cache()
+          return
+        }
+
+        const fl = 450
+        var scale = fl / (fl - this.z);
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(this.x, this.y, this.r * scale, 0, Math.PI * 2)
+        ctx.globalAlpha = (this.z + layerR) / (layerR * 2)
+        // ctx.globalAlpha = 0
+        ctx.fill()
+        ctx.restore()
+      },
+      move () {
+        this.render()
+      },
+      cache () {
+        const fl = 450
+        var scale = fl / (fl - this.z);
+        this.cacheCtx.save()
+        this.cacheCtx.beginPath()
+        this.cacheCtx.arc(this.x, this.y, this.r * scale, 0, Math.PI * 2)
+        // this.cacheCtx.globalAlpha = (this.z + layerR) / (layerR * 2)
+        this.cacheCtx.globalAlpha = 0
+        this.cacheCtx.fill()
+        this.cacheCtx.restore()
+      }
+    }
+
+    Stage.prototype = {
+      init () {
+        for (let i = 0; i < floor / 2; ++i) {
+          const layer = new Layer(i, 1)
+          layer.render()
+          const _layer = new Layer(i, -1)
+          _layer.render()
+        }
+        this.rotateX()
+      },
+      update () {
+        ctx.clearRect(-centerX, -centerY, canvas.width, canvas.height)
+        this.cacheCtx.clearRect(-centerX, -centerY, canvas.width, canvas.height)
+        this.rotateY()
+      },
+      rotate() {
+        var cos = Math.cos(angleY);
+        var sin = Math.sin(angleY);
+
+        for (let i = 0; i < Balls.length; ++i) {
+          var x1 = Balls[i].x * cos - Balls[i].y * sin;
+          var z1 = Balls[i].z * cos - Balls[i].y * sin;
+          var y1 = Balls[i].y * cos + Balls[i].z * sin;
+          Balls[i].x = x1
+          Balls[i].z = z1
+          Balls[i].y = y1
+          Balls[i].move()
+        }
+      },
+      rotateY () {
+        var cos = Math.cos(angleY);
+        var sin = Math.sin(angleY);
+
+        for (let i = 0; i < Balls.length; ++i) {
+          var z1 = Balls[i].z * cos - Balls[i].x * sin;
+          var x1 = Balls[i].x * cos + Balls[i].z * sin;
+          Balls[i].z = z1
+          Balls[i].x = x1
+          Balls[i].render()
+          this.setLines()
+        this.setVericalLine()
+        }
+      },
+      rotateX () {
+        var cos = Math.cos(Math.PI / 2);
+        var sin = Math.sin(Math.PI / 2);
+
+        for (let i = 0; i < Balls.length; ++i) {
+          var z1 = Balls[i].z * cos - Balls[i].y * sin;
+          var y1 = Balls[i].y * cos + Balls[i].z * sin;
+          Balls[i].z = z1
+          Balls[i].y = y1
+          // Balls[i].render()
+        }
+        this.setLines()
+        this.setVericalLine()
+      },
+      rotateXLine () {
+        var cos = Math.cos(angleY);
+        var sin = Math.sin(angleY);
+
+        for (let i = 0; i < Lines.length; ++i) {
+          var z1 = Lines[i].z * cos - Lines[i].y * sin;
+          var y1 = Lines[i].y * cos + Lines[i].z * sin;
+          Lines[i].z = z1
+          Lines[i].y = y1
+          Lines[i].render()
+        }
+      },
+      rotateZ () {
+        var cos = Math.cos(angleY);
+        var sin = Math.sin(angleY);
+
+        for (let i = 0; i < Lines.length; ++i) {
+          var x1 = Lines[i].x * cos - Lines[i].y * sin;
+          var y1 = Lines[i].y * cos + Lines[i].x * sin;
+          Lines[i].x = x1
+          Lines[i].y = y1
+          Lines[i].render()
+        }
+      },
+      setLines () {
+        this.cacheCtx.save()
+        this.cacheCtx.strokeStyle = '#0b49d2'
+        let cache = Balls[0]
+        for (let j = 0; j < Balls.length; ++j) {
+          this.cacheCtx.beginPath()
+          this.cacheCtx.moveTo(Balls[j].x, Balls[j].y)
+
+          if ((j + 1) % count === 0) {
+            if (cache) {
+              this.cacheCtx.lineTo(cache.x, cache.y)
+              cache = Balls[j + 1]
+            }
+          } else {
+            this.cacheCtx.lineTo(Balls[j + 1].x, Balls[j + 1].y)
+          }
+          this.cacheCtx.closePath()
+          this.cacheCtx.stroke()
+        }
+        this.cacheCtx.restore()
+        ctx.drawImage(this.cacheCanvas, -centerX, -centerY)
+      },
+      setVericalLine () {
+        this.cacheCtx.save()
+        this.cacheCtx.strokeStyle = '#0b49d2'
+        for (let i = 0; i < count; ++i) {
+          this.cacheCtx.beginPath()
+          for (let j = 0; j < floor - 2; ++j) {
+            this.cacheCtx.moveTo(Balls[i + j * count].x, Balls[i + j * count].y)
+            this.cacheCtx.lineTo(Balls[i + (j + 2) * count].x, Balls[i + (j + 2) * count].y)
+          }
+          this.cacheCtx.closePath()
+          this.cacheCtx.stroke()
+        }
+        this.cacheCtx.restore()
+        ctx.drawImage(this.cacheCanvas, -centerX, -centerY)
+      },
+      loop () {
+        this.update()
+        
+        RAF(() => {
+          this.loop()
+        })
+      },
+      start () {
+        this.init()
+        this.loop()
+      }
+    }
+
+    Line.prototype = {
+      render () {
+        ctx.beginPath()
+        ctx.moveTo(0, 0)
+        ctx.lineTo(this.x, this.y)
+        ctx.closePath()
+        ctx.stroke()
+      },
+      move () {
+        this.render()
+      }
+    }
+    const stage = new Stage()
+    stage.start()
+
+   
+    
+  </script>
+  
+</body>
+
+</html>
