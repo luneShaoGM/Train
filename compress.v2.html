@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <form action="">
+    <input type="file" name="file">
+  </form>
+
+  <script>
+    window.onload = function () {
+      const fileEl = document.querySelector('[name=file]')
+      fileEl.addEventListener('change', e => {
+        const cp = new Compress({
+          file: fileEl.files[0],
+          scale: 0.1
+        })
+
+        cp.init()
+      })
+    }
+  </script>
+
+  <script>
+    function Compress(option) {
+      this.file = option.file // 文件
+      this.filename = option.file.name // 文件名
+      this.scale = option.scale // 压缩比例
+    }
+
+    Compress.prototype = {
+      async init() {
+        // 读文件 => 拿到 base64 url
+        this.base64 = await this.getBase64()
+        // 根据 base64 url 生成 Image 对象
+        this.imgObj = await this.createImage()
+        // 创建一个 canvas 画布 => 在画布渲染图片 => 依赖 canvas 的 toDataUrl api 压缩图片
+        this.do()
+        // 根据文件生成 File
+        this.dataUrl2File()
+        
+        // 压缩前的图片
+        this.addImgEl(this.base64)
+        // 压缩后的图片
+        this.addImgEl(this.compresDataURL)
+      },
+      /** 
+       * 读文件 => 拿到 base64 url
+       **/
+      getBase64() {
+        const reader = new FileReader()
+        reader.readAsDataURL(this.file)
+
+        return new Promise((res, rej) => {
+          reader.onload = () => {
+            res(reader.result)
+          }
+        })
+      },
+      /**
+       * 根据 base64 url 生成 Image 对象
+       **/
+      createImage() {
+        const img = new Image()
+        img.src = this.base64
+
+        return new Promise((res) => {
+          img.onload = () => {
+            res(img)
+          }
+        })
+      },
+      /**
+       * 创建一个 canvas 画布 => 在画布渲染图片 => 依赖 canvas 的 toDataUrl api 压缩图片
+      **/
+      do() {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        canvas.width = this.imgObj.width
+        canvas.height = this.imgObj.height
+
+        ctx.drawImage(this.imgObj, 0, 0, this.imgObj.width, this.imgObj.height)
+
+        // 关键句
+        /** 文档说明
+         * encoderOptions 可选
+         * ⚠️ 在指定图片格式为 【 image/jpeg 】 或  【 image/webp 】的情况下，可以从 0 到 1 的区间内选择图片的质量。！！！
+         * 如果超出取值范围，将会使用默认值 0.92。其他参数会被忽略。
+        **/
+        this.compresDataURL = canvas.toDataURL('image/jpeg', this.scale)
+      },
+      // 压缩后的 base64 url 生成 File 文件
+      dataUrl2File () {
+        const 
+        base64 = this.compresDataURL.split(',')[1], 
+        btos = atob(base64);
+        let n = base64.length, arrayBuffer = new Uint8Array(n)
+
+        while((n --) > 0) {
+          arrayBuffer[n] = btos.charCodeAt(n)
+        }
+
+        this.afterCompressFile = new File([arrayBuffer], this.filename, {type: 'image/jpeg'})
+      },
+      // 向页面中添加图片节点
+      addImgEl (url) {
+        const img = new Image()
+        img.src = url
+        img.width = 200
+
+        img.onload = function () {
+          document.body.appendChild(img)
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
