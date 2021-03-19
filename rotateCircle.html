@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <canvas width="236px" height="236px" id="feverMonth"></canvas>
+  <canvas width="236px" height="236px" id="feverMonthOuter" style="transform: translateX(-240px);"></canvas>
+  <script>
+    const lineCounts = 120
+    const _canvas = document.querySelector('#feverMonth')
+    const _ctx = _canvas.getContext('2d')
+    const center = _canvas.height / 2
+    const height = _canvas.height
+    const width = _canvas.width
+    let rotate = 0
+
+    const RotateCircle = function () {
+      this.rotateDeg = 0
+      this.center = center
+      this.cacheCanvas = document.createElement('canvas')
+      this.cacheCanvas.width = width
+      this.cacheCanvas.height = height
+      this.cacheCtx = this.cacheCanvas.getContext('2d')
+      
+      this.cachePaintCanvas = document.createElement('canvas')
+      this.cachePaintCanvas.width = width
+      this.cachePaintCanvas.height = height
+      this.cachePaintCtx = this.cachePaintCanvas.getContext('2d')
+      this.cachePaintCtx.translate(center, center)
+    }
+
+    RotateCircle.prototype = {
+      outCircleShow () {
+        this.cacheCtx.strokeStyle = '#4ea5ff'
+        for (let i = 0; i < lineCounts; ++i) {
+          this.cacheCtx.save()
+          this.cacheCtx.beginPath()
+          this.cacheCtx.translate(center, center)
+          this.cacheCtx.lineWidth = 1
+
+          this.cacheCtx.rotate(+((Math.PI * 2) / lineCounts * i + rotate).toFixed(2))
+          this.cacheCtx.moveTo(center, 0)
+          this.cacheCtx.lineTo(100, 0)
+
+          this.cacheCtx.rotate((Math.PI * 2) / lineCounts * i + rotate)
+          this.cacheCtx.closePath()
+          this.cacheCtx.stroke()
+          this.cacheCtx.restore()
+        }
+      },
+      simicircleShow () {
+        this.cacheCtx.beginPath()
+        this.cacheCtx.strokeStyle = '#71b8ff'
+        this.cacheCtx.lineWidth = 20
+        this.cacheCtx.arc(center, center, 60, -rotate, Math.PI - rotate)
+        this.cacheCtx.stroke()
+        this.cacheCtx.closePath()
+      },
+      rotate (_rotate) {
+        this.rotateDeg = _rotate
+        this.cachePaintCtx.clearRect(-_canvas.height, -_canvas.height, _canvas.height * 2, _canvas.height * 2)
+        this.cachePaintCtx.save()
+        this.cachePaintCtx.rotate(this.rotateDeg)
+        this.cachePaintCtx.drawImage(this.cacheCanvas, -center, -center)
+        this.cachePaintCtx.restore()
+        this.paint()
+      },
+      paint () {
+        _ctx.drawImage(this.cachePaintCanvas, 0, 0)
+      }
+    }
+
+    const outCircle = new RotateCircle()
+    outCircle.outCircleShow()
+
+    const simicircle = new RotateCircle()
+    simicircle.simicircleShow()
+
+    // 线圈
+    function draw() {
+      if (rotate >= 360) {
+        rotate = 0
+      }
+      rotate = +(rotate + 0.01).toFixed(2)
+      _ctx.clearRect(0, 0, _canvas.height + 2, _canvas.height + 2)
+      outCircle.rotate(rotate)
+      simicircle.rotate(-rotate)
+      window.requestAnimationFrame(draw)
+    }
+
+    function drawStatic() {
+      let _canvas = document.querySelector('#feverMonthOuter')
+      let _ctx = _canvas.getContext('2d')
+      _ctx.translate(0, height)
+      _ctx.scale(1, -1)
+      // 圆边 + 渐变圆
+      _ctx.beginPath()
+      _ctx.arc(center, center, 86, 0, Math.PI * 2)
+      const radialGradient1 = _ctx.createRadialGradient(center, center, 86, center, center, 60)
+      radialGradient1.addColorStop(0, 'rgba(60, 115, 255, .5)')
+      radialGradient1.addColorStop(1, 'rgba(0, 0, 0, 0)')
+
+      _ctx.strokeStyle = '#92c5ff'
+      _ctx.fillStyle = radialGradient1
+      _ctx.lineWidth = 2
+      _ctx.stroke()
+      _ctx.fill()
+      _ctx.save()
+
+      _ctx.beginPath()
+      const lineGradient2 = _ctx.createLinearGradient(180, 180, 70, 70)
+
+      lineGradient2.addColorStop(0, 'rgba(120, 149, 255, .1)')
+      lineGradient2.addColorStop(1, 'rgba(255, 255, 255, 0.1)')
+      _ctx.fillStyle = lineGradient2
+      _ctx.arc(center, center, 70, 0, Math.PI * 2)
+      _ctx.fill()
+      _ctx.save()
+
+      // 内圆
+      _ctx.beginPath()
+      const radialGradient2 = _ctx.createRadialGradient(center, center, 50, center, center, 0)
+      radialGradient2.addColorStop(0, 'rgba(60, 170, 255, .3)')
+      radialGradient2.addColorStop(0.4, 'rgba(60, 170, 255, .1)')
+      radialGradient2.addColorStop(1, 'rgba(60, 170, 255, 0)')
+      _ctx.arc(center, center, 50, 0, Math.PI * 2)
+      _ctx.fillStyle = radialGradient2
+      _ctx.strokeStyle = '#267dff'
+      _ctx.lineWidth = 2
+      _ctx.stroke()
+      _ctx.fill()
+    }
+    
+    drawStatic()
+    draw()
+  </script>
+  <script>
+    javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+  </script>
+</body>
+
+</html>
